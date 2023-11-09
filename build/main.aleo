@@ -1,12 +1,15 @@
 program zk_bitwise_stack_v0_0_1.aleo;
 
-record Stack:
-    owner as address.private;
-    capacity as u16.private;
-    top as u16.private;
-    member_size as u8.private;
-    s00 as [u128; 26u32].private;
-    s01 as [u128; 26u32].private;
+struct Stack:
+    capacity as u16;
+    top as u16;
+    member_size as u8;
+    s00 as [u128; 26u32];
+    s01 as [u128; 26u32];
+
+
+
+
 
 
 
@@ -30,30 +33,10 @@ closure get_series_buffer_indexes:
     output r10 as u8;
 
 
-function init_stack:
-    input r0 as u8.private;
-    rem r0 8u8 into r1;
-    assert.eq r1 0u8;
-    cast r0 into r2 as u16;
-    div 6656u16 r2 into r3;
-    gt r3 0u16 into r4;
-    assert.eq r4 true;
-    lte r3 832u16 into r5;
-    assert.eq r5 true;
-    gt r0 0u8 into r6;
-    assert.eq r6 true;
-    lte r0 128u8 into r7;
-    assert.eq r7 true;
-    cast 0u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u128 into r8 as [u128; 26u32];
-    cast 0u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u1280u128 into r9 as [u128; 26u32];
-    cast self.caller r3 0u16 r0 r8 r9 into r10 as Stack.record;
-    output r10 as Stack.record;
-
-
 closure get_buffer_at_series_index:
     input r0 as u8;
     input r1 as u8;
-    input r2 as Stack.record;
+    input r2 as Stack;
     is.eq r0 0u8 into r3;
     is.eq r1 0u8 into r4;
     is.eq r1 1u8 into r5;
@@ -1796,7 +1779,7 @@ closure get_buffer_at_series_index:
 closure set_buffer_at_series_index:
     input r0 as u8;
     input r1 as u8;
-    input r2 as Stack.record;
+    input r2 as Stack;
     input r3 as u128;
     is.eq r0 0u8 into r4;
     is.eq r1 0u8 into r5;
@@ -2758,67 +2741,84 @@ closure set_buffer_at_series_index:
 
 function push:
     input r0 as u128.private;
-    input r1 as Stack.record;
-    call get_series_buffer_indexes r1.top r1.member_size into r2 r3;
-    call get_buffer_at_series_index r2 r3 r1 into r4;
-    lt r1.member_size 128u8 into r5;
-    sub 128u8 r1.member_size into r6;
-    shr.w 340282366920938463463374607431768211455u128 r6 into r7;
-    ternary r5 r7 340282366920938463463374607431768211455u128 into r8;
-    lt r1.top r1.capacity into r9;
-    assert.eq r9 true;
-    lte r0 r8 into r10;
-    assert.eq r10 true;
-    lte r8 340282366920938463463374607431768211455u128 into r11;
-    assert.eq r11 true;
-    shl.w r4 r1.member_size into r12;
-    or r12 r0 into r13;
-    call set_buffer_at_series_index r2 r3 r1 r13 into r14 r15;
-    add r1.top 1u16 into r16;
-    cast self.caller r1.capacity r16 r1.member_size r14 r15 into r17 as Stack.record;
-    output r17 as Stack.record;
+    input r1 as u16.private;
+    input r2 as u16.private;
+    input r3 as u8.private;
+    input r4 as [u128; 26u32].private;
+    input r5 as [u128; 26u32].private;
+    cast r1 r2 r3 r4 r5 into r6 as Stack;
+    call get_series_buffer_indexes r6.top r6.member_size into r7 r8;
+    call get_buffer_at_series_index r7 r8 r6 into r9;
+    lt r6.member_size 128u8 into r10;
+    sub 128u8 r6.member_size into r11;
+    shr.w 340282366920938463463374607431768211455u128 r11 into r12;
+    ternary r10 r12 340282366920938463463374607431768211455u128 into r13;
+    lt r6.top r6.capacity into r14;
+    assert.eq r14 true;
+    lte r0 r13 into r15;
+    assert.eq r15 true;
+    lte r13 340282366920938463463374607431768211455u128 into r16;
+    assert.eq r16 true;
+    shl.w r9 r6.member_size into r17;
+    or r17 r0 into r18;
+    call set_buffer_at_series_index r7 r8 r6 r18 into r19 r20;
+    add r6.top 1u16 into r21;
+    cast r6.capacity r21 r6.member_size r19 r20 into r22 as Stack;
+    output r22.top as u16.private;
+    output r22.capacity as u16.private;
+    output r22.member_size as u8.private;
+    output r22.s00 as [u128; 26u32].private;
+    output r22.s01 as [u128; 26u32].private;
 
 
 function pop:
-    input r0 as Stack.record;
-    is.eq r0.top 0u16 into r1;
-    not r1 into r2;
-    assert.eq r2 true;
-    sub r0.top 1u16 into r3;
-    call get_series_buffer_indexes r3 r0.member_size into r4 r5;
-    call get_buffer_at_series_index r4 r5 r0 into r6;
-    lt r0.member_size 128u8 into r7;
-    sub 128u8 r0.member_size into r8;
-    shr.w 340282366920938463463374607431768211455u128 r8 into r9;
-    and r6 r9 into r10;
-    is.eq r0.member_size 8u8 into r11;
-    shr r6 8u8 into r12;
-    is.eq r0.member_size 16u8 into r13;
-    shr r6 16u8 into r14;
-    is.eq r0.member_size 32u8 into r15;
-    shr r6 32u8 into r16;
-    is.eq r0.member_size 64u8 into r17;
-    shr r6 64u8 into r18;
-    not r11 into r19;
-    and r7 r19 into r20;
-    not r13 into r21;
-    and r20 r21 into r22;
-    not r15 into r23;
-    and r22 r23 into r24;
-    not r17 into r25;
-    and r24 r25 into r26;
-    not r26 into r27;
-    or r27 false into r28;
-    assert.eq r28 true;
-    ternary r17 r18 0u128 into r29;
-    ternary r15 r16 r29 into r30;
-    ternary r13 r14 r30 into r31;
-    ternary r11 r12 r31 into r32;
-    ternary r7 r9 340282366920938463463374607431768211455u128 into r33;
-    ternary r7 r10 r6 into r34;
-    ternary r7 r32 0u128 into r35;
-    call set_buffer_at_series_index r4 r5 r0 r35 into r36 r37;
-    sub r0.top 1u16 into r38;
-    cast self.caller r0.capacity r38 r0.member_size r36 r37 into r39 as Stack.record;
-    output r34 as u128.private;
-    output r39 as Stack.record;
+    input r0 as u16.private;
+    input r1 as u16.private;
+    input r2 as u8.private;
+    input r3 as [u128; 26u32].private;
+    input r4 as [u128; 26u32].private;
+    cast r0 r1 r2 r3 r4 into r5 as Stack;
+    is.eq r5.top 0u16 into r6;
+    not r6 into r7;
+    assert.eq r7 true;
+    sub r5.top 1u16 into r8;
+    call get_series_buffer_indexes r8 r5.member_size into r9 r10;
+    call get_buffer_at_series_index r9 r10 r5 into r11;
+    lt r5.member_size 128u8 into r12;
+    sub 128u8 r5.member_size into r13;
+    shr.w 340282366920938463463374607431768211455u128 r13 into r14;
+    and r11 r14 into r15;
+    is.eq r5.member_size 8u8 into r16;
+    shr r11 8u8 into r17;
+    is.eq r5.member_size 16u8 into r18;
+    shr r11 16u8 into r19;
+    is.eq r5.member_size 32u8 into r20;
+    shr r11 32u8 into r21;
+    is.eq r5.member_size 64u8 into r22;
+    shr r11 64u8 into r23;
+    not r16 into r24;
+    and r12 r24 into r25;
+    not r18 into r26;
+    and r25 r26 into r27;
+    not r20 into r28;
+    and r27 r28 into r29;
+    not r22 into r30;
+    and r29 r30 into r31;
+    not r31 into r32;
+    or r32 false into r33;
+    assert.eq r33 true;
+    ternary r22 r23 0u128 into r34;
+    ternary r20 r21 r34 into r35;
+    ternary r18 r19 r35 into r36;
+    ternary r16 r17 r36 into r37;
+    ternary r12 r14 340282366920938463463374607431768211455u128 into r38;
+    ternary r12 r15 r11 into r39;
+    ternary r12 r37 0u128 into r40;
+    call set_buffer_at_series_index r9 r10 r5 r40 into r41 r42;
+    sub r5.top 1u16 into r43;
+    output r39 as u128.private;
+    output r5.capacity as u16.private;
+    output r43 as u16.private;
+    output r5.member_size as u8.private;
+    output r41 as [u128; 26u32].private;
+    output r42 as [u128; 26u32].private;

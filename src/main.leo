@@ -1,7 +1,6 @@
 program zk_bitwise_stack_v0_0_1.aleo {
 
-    record Stack {
-        owner: address,
+    struct Stack {
         capacity: u16,
         top: u16,
         member_size: u8,
@@ -15,6 +14,20 @@ program zk_bitwise_stack_v0_0_1.aleo {
 
     inline is_full(stack: Stack) -> bool {
         return stack.top == stack.capacity;
+    }
+
+    inline stack_from_inputs(capacity: u16, top: u16, member_size: u8, s00: [u128; 26], s01: [u128; 26]) -> Stack {
+        return Stack {
+            capacity,
+            top,
+            member_size,
+            s00,
+            s01,
+        };
+    }
+
+    inline stack_to_outputs(stack: Stack) -> (u16, u16, u8, [u128; 26], [u128; 26]) {
+        return (stack.top, stack.capacity, stack.member_size, stack.s00, stack.s01);
     }
 
     // top is the index of the next element to be pushed.
@@ -32,27 +45,6 @@ program zk_bitwise_stack_v0_0_1.aleo {
         let series_index: u16 = top / (elements_per_buffer * BUFFERS_PER_SERIES);
         let buffer_index: u16 = (top / elements_per_buffer) % BUFFERS_PER_SERIES;
         return (series_index as u8, buffer_index as u8);
-    }
-
-    transition init_stack(member_size: u8) -> Stack {
-        assert_eq(member_size % 8u8, 0u8);
-        let max_size: u16 = member_size as u16;
-        let capacity: u16 = 6656u16 / max_size;
-        // Check for overflow
-        assert(capacity > 0u16); 
-        assert(capacity <= 832u16);
-        assert(member_size > 0u8);
-        assert(member_size <= 128u8);
-        return Stack {
-            owner: self.caller,
-            capacity,
-            top: 0u16,
-            member_size,
-            s00: [0u128, 0u128, 0u128, 0u128, 0u128, 0u128,0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128,
-                 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128],
-            s01: [0u128, 0u128, 0u128, 0u128, 0u128, 0u128,0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128,
-                 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128, 0u128],
-        };
     }
 
     function get_buffer_at_series_index(series_index: u8, buffer_index: u8, stack: Stack) -> u128 {
@@ -513,11 +505,12 @@ program zk_bitwise_stack_v0_0_1.aleo {
                 [s01b0, s01b1, s01b2, s01b3, s01b4, s01b5, s01b6, s01b7, s01b8, s01b9, s01b10, s01b11, s01b12, s01b13, s01b14, s01b15, s01b16, s01b17, s01b18, s01b19, s01b20, s01b21, s01b22, s01b23, s01b24, s01b25]);
     }
 
-    transition push(value: u128, stack: Stack) -> Stack {
+    transition push(value: u128, capacity: u16, top: u16, member_size: u8, s00: [u128; 26], s01: [u128; 26]) -> (u16, u16, u8, [u128; 26], [u128; 26]) {
         const MAX_U128_VALUE: u128 = 340282366920938463463374607431768211455u128;
         const FULL_BITS: u8 = 128u8;
         const ZERO: u8 = 0u8;
         const ONE: u8 = 1u8;
+        let stack: Stack = stack_from_inputs(capacity, top, member_size, s00, s01);
         let (series_index, buffer_index): (u8, u8) = get_series_buffer_indexes(stack.top, stack.member_size);
         // Calculate series_index and modify if necessary
         let series: u128 = get_buffer_at_series_index(series_index, buffer_index, stack);
@@ -533,21 +526,23 @@ program zk_bitwise_stack_v0_0_1.aleo {
 
         // Shift Left and then use OR to add the value to the series.
         let new_buffer_in_series: u128 = (series.shl_wrapped(stack.member_size)) | value;
-        let (s00, s01): ([u128; 26], [u128; 26]) = set_buffer_at_series_index(series_index, buffer_index, stack, new_buffer_in_series);
+        let new_series: ([u128; 26], [u128; 26]) = set_buffer_at_series_index(series_index, buffer_index, stack, new_buffer_in_series);
 
-        return Stack {
-            owner: self.caller,
+        let outgoing_stack: Stack = Stack {
             capacity: stack.capacity,
             top: stack.top + 1u16,
             member_size: stack.member_size,
-            s00,
-            s01,
+            s00: new_series.0,
+            s01: new_series.1,
         };
+
+        return stack_to_outputs(outgoing_stack);
     }
 
-    transition pop(stack: Stack) -> (u128, Stack) {
+    transition pop(capacity: u16, top: u16, member_size: u8, s00: [u128; 26], s01: [u128; 26]) -> (u128, u16, u16, u8, [u128; 26], [u128; 26]) {
         const MAX_U128_VALUE: u128 = 340282366920938463463374607431768211455u128;
         const FULL_BITS: u8 = 128u8;
+        let stack: Stack = stack_from_inputs(capacity, top, member_size, s00, s01);
         // Check for underflow.
         assert(!is_empty(stack));
         let (series_index, buffer_index): (u8, u8) = get_series_buffer_indexes(stack.top - 1u16, stack.member_size);
@@ -577,14 +572,114 @@ program zk_bitwise_stack_v0_0_1.aleo {
                 assert(false);
             }
         }
-        let (s00, s01): ([u128; 26], [u128; 26]) = set_buffer_at_series_index(series_index, buffer_index, stack, new_buffer_in_series);
-        return (value, Stack {
-            owner: self.caller,
-            capacity: stack.capacity,
-            top: stack.top - 1u16,
-            member_size: stack.member_size,
-            s00,
-            s01,
-        });
+        let new_series: ([u128; 26], [u128; 26]) = set_buffer_at_series_index(series_index, buffer_index, stack, new_buffer_in_series);
+        return (value, stack.capacity, stack.top - 1u16, stack.member_size, new_series.0, new_series.1);
     }
+
+//     transition test_pop_u8() -> (u128, Stack) {
+//         // let a1: Stack = init_stack(8u8);
+//         // let a1: Stack = init_stack(16u8);
+//         // let a1: Stack = init_stack(32u8);
+//         // let a1: Stack = init_stack(64u8);
+//         let a1: Stack = init_stack(128u8);
+//         let a2: Stack = push(1u128, a1);
+//         let a3: Stack = push(2u128, a2);
+//         let a4: Stack = push(3u128, a3);
+//         let a5: Stack = push(4u128, a4);
+//         let a6: Stack = push(5u128, a5);
+//         let a7: Stack = push(6u128, a6);
+//         let a8: Stack = push(7u128, a7);
+//         let a9: Stack = push(8u128, a8);
+//         let a10: Stack = push(9u128, a9);
+//         let a11: Stack = push(10u128, a10);
+//         let a12: Stack = push(11u128, a11);
+//         let a13: Stack = push(12u128, a12);
+//         let a14: Stack = push(13u128, a13);
+//         let a15: Stack = push(14u128, a14);
+//         let a16: Stack = push(15u128, a15);
+//         let a17: Stack = push(16u128, a16);
+//         let a18: Stack = push(17u128, a17);
+//         let a19: Stack = push(18u128, a18);
+//         let a20: Stack = push(19u128, a19);
+//         let a21: Stack = push(20u128, a20);
+//         let a22: Stack = push(21u128, a21);
+//         let a23: Stack = push(22u128, a22);
+//         let a24: Stack = push(23u128, a23);
+//         let a25: Stack = push(24u128, a24);
+//         let a26: Stack = push(25u128, a25);
+//         let a27: Stack = push(26u128, a26);
+//         let a28: Stack = push(27u128, a27);
+//         let tuple_b1: (u128, Stack) = pop(a28);
+//         let tuple_b2: (u128, Stack) = pop(tuple_b1.1);
+//         let tuple_b3: (u128, Stack) = pop(tuple_b2.1);
+//         let tuple_b4: (u128, Stack) = pop(tuple_b3.1);
+//         let tuple_b5: (u128, Stack) = pop(tuple_b4.1);
+//         let tuple_b6: (u128, Stack) = pop(tuple_b5.1);
+//         let tuple_b7: (u128, Stack) = pop(tuple_b6.1);
+//         let tuple_b8: (u128, Stack) = pop(tuple_b7.1);
+//         let tuple_b9: (u128, Stack) = pop(tuple_b8.1);
+//         let tuple_b10: (u128, Stack) = pop(tuple_b9.1);
+//         let tuple_b11: (u128, Stack) = pop(tuple_b10.1);
+//         let tuple_b12: (u128, Stack) = pop(tuple_b11.1);
+//         let tuple_b13: (u128, Stack) = pop(tuple_b12.1);
+//         let tuple_b14: (u128, Stack) = pop(tuple_b13.1);
+//         let tuple_b15: (u128, Stack) = pop(tuple_b14.1);
+//         let tuple_b16: (u128, Stack) = pop(tuple_b15.1);
+//         let tuple_b17: (u128, Stack) = pop(tuple_b16.1);
+//         let tuple_b18: (u128, Stack) = pop(tuple_b17.1);
+//         let tuple_b19: (u128, Stack) = pop(tuple_b18.1);
+//         let tuple_b20: (u128, Stack) = pop(tuple_b19.1);
+//         let tuple_b21: (u128, Stack) = pop(tuple_b20.1);
+//         let tuple_b22: (u128, Stack) = pop(tuple_b21.1);
+//         let tuple_b23: (u128, Stack) = pop(tuple_b22.1);
+//         let tuple_b24: (u128, Stack) = pop(tuple_b23.1);
+//         let tuple_b25: (u128, Stack) = pop(tuple_b24.1);
+//         let tuple_b26: (u128, Stack) = pop(tuple_b25.1);
+//         let tuple_b27: (u128, Stack) = pop(tuple_b26.1);
+//         return tuple_b27;
+//     }
+
+//     transition test_push_pop() -> (Stack, Stack, Stack, u128) {
+//         let a0: Stack = init_stack(8u8);
+//         let a1: Stack = push(1u128, a0);
+//         let tuple_b1: (u128, Stack) = pop(a1);
+//         return (a0, a1, tuple_b1.1, tuple_b1.0);
+//     }
+
+//     transition test_series_buffer_indexes_u8() -> (u8, u8) {
+//         let (series_index, buffer_index): (u8, u8) = get_series_buffer_indexes(0u16, 8u8);
+//         assert(series_index == 0u8);
+//         assert(buffer_index == 0u8);
+//         let (series_index1, buffer_index1): (u8, u8) = get_series_buffer_indexes(1u16, 8u8);
+//         assert(series_index1 == 0u8);
+//         assert(buffer_index1 == 0u8);
+//         let (series_index2, buffer_index2): (u8, u8) = get_series_buffer_indexes(2u16, 8u8);
+//         assert(series_index2 == 0u8);
+//         assert(buffer_index2 == 0u8);
+//         let (series_index3, buffer_index3): (u8, u8) = get_series_buffer_indexes(3u16, 8u8);
+//         assert(series_index3 == 0u8);
+//         assert(buffer_index3 == 0u8);
+//         let (series_index4, buffer_index4): (u8, u8) = get_series_buffer_indexes(4u16, 8u8);
+//         assert(series_index4 == 0u8);
+//         assert(buffer_index4 == 0u8);
+//         let (series_index5, buffer_index5): (u8, u8) = get_series_buffer_indexes(5u16, 8u8);
+//         assert(series_index5 == 0u8);
+//         assert(buffer_index5 == 0u8);
+//         let (series_index6, buffer_index6): (u8, u8) = get_series_buffer_indexes(6u16, 8u8);
+//         assert(series_index6 == 0u8);
+//         assert(buffer_index6 == 0u8);
+//         let (series_index7, buffer_index7): (u8, u8) = get_series_buffer_indexes(7u16, 8u8);
+//         assert(series_index7 == 0u8);
+//         assert(buffer_index7 == 0u8);
+//         let (series_index8, buffer_index8): (u8, u8) = get_series_buffer_indexes(8u16, 8u8);
+//         assert(series_index8 == 0u8);
+//         assert(buffer_index8 == 0u8);
+//         let (series_index9, buffer_index9): (u8, u8) = get_series_buffer_indexes(3u16, 64u8);
+//         assert(series_index9 == 0u8);
+//         assert(buffer_index9 == 1u8);
+//         let (series_index10, buffer_index10): (u8, u8) = get_series_buffer_indexes(25u16, 128u8);
+//         assert (series_index10 == 0u8);
+//         assert (buffer_index10 == 25u8);
+//         return (series_index10, buffer_index10);
+//     }
 }
