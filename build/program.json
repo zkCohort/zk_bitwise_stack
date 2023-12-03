@@ -1,7 +1,7 @@
 {
-  "program": "zk_bitwise_stack_v0_0_1.aleo",
-  "version": "0.0.1",
-  "description": "",
+  "program": "zk_bitwise_stack_v0_0_2.aleo",
+  "version": "0.0.2",
+  "description": "Data Structure for Bitwise Stack.  Holds 8-bit, 16-bit, 32-bit, 64-0bit and 128-bit integers packed into 52 u128 values.  Supports push, pop, and peek operations.",
   "license": "GPL-3.0",
   "dependencies": []
 }
