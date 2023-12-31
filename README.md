@@ -1369,3 +1369,66 @@ leo run pop "{
 
        Leo ✅ Finished 'zk_bitwise_stack_v0_0_5.aleo/pop'
 ```
+
+```bash
+leo run peek "{
+  capacity: 832u16,
+  top: 3u16,
+  member_size: 8u16,
+  s00: [
+    66051field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field
+  ],
+  s01: [
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field,
+    0field
+  ]
+}"
